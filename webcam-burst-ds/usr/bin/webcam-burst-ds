@@ -1,0 +1,46 @@
+#!/bin/sh
+
+list_resolutions(){
+	NUMCAM="$1"
+	[ "$NUMCAM" ] || NUMCAM="0"
+	v4l2-ctl -d $NUMCAM --list-formats-ext |sed -ne "/^[[:blank:]]*Index[[:blank:]]*:[[:blank:]]*0/,/^[[:blank:]]*Index[[:blank:]]*:/{/^[[:blank:]]*Size/{s%^.*[[:blank:]]%%;p}}"
+
+}
+
+best_resolution(){
+	list_resolutions "$1" |sort -t x -n -k 1,2 |tail -1
+}
+
+DEF_RESOLUTION="640x480"
+
+rc=0
+
+APP_DIR="$HOME/webcam-burst-ds"
+mkdir -p "$APP_DIR"
+cd "$APP_DIR"
+ARG_CMD=""
+
+URI="-s https://fsserver:3499"
+NUMCAM="0"
+
+while [ "$1" ] ; do
+	if [ "$1" = "-s" ] ; then
+		shift
+		URI="$1"
+	elif [ "$1" = "-c" ] ; then
+		shift
+		NUMCAM="$1"
+	else
+		ARG_CMD="$ARG_CMD $1"
+	fi
+	shift
+done
+
+RESOLUTION="$(best_resolution "$NUMCAM")"
+[ "$RESOLUTION" ] || RESOLUTION="$DEF_RESOLUTION"
+
+ARG_CMD="$ARG_CMD -s $URI -c $NUMCAM -r $RESOLUTION"
+
+/usr/share/webcam-burst-ds/webcam_burst.py $ARG_CMD || rc=$?
+
+exit $rc

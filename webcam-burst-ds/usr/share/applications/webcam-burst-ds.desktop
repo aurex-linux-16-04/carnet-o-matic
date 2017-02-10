@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=webcam-burst-ds
+Comment=Take bursts of photos
+Keywords=photo;video;webcam;
+Exec=webcam-burst-ds
+Terminal=false
+Type=Application
+StartupNotify=true
+Icon=/usr/share/webcam-burst-ds/webcam-burst-ds.png
+Categories=GNOME;AudioVideo;Video;Recorder;

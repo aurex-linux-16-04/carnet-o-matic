@@ -21,7 +21,7 @@ import MySQLdb
 import getopt
 import ssl
 
-from webcam_dialogs import get_credentials, error_dialog, info_dialog, get_student
+from webcam_dialogs import error_dialog, info_dialog, get_student
 
 def usage(param=''):
 	if param:
@@ -237,13 +237,14 @@ if __name__ == '__main__':
 	server = None
 
 	datastore_uri = ''
-	datastore_space = 'matricula'
+	datastore_space = 'opendoors'
 	dbhost = ''
 	dbname = ''
 	dbpass = ''
 	dbuser = ''
 
 	webcam = -1
+	resolution = ''
 	conf_file = '/etc/carnet-o-matic/carnet-o-matic.conf'
 	new_apenom = ''
 	new_email = ''
@@ -255,12 +256,12 @@ if __name__ == '__main__':
 
 	def_nia = ''
 
-	(USERNAME, PASSWORD) = get_credentials()
-	if not USERNAME or not PASSWORD:
-		quit()
+	USERNAME = 'anonymous'
+	PASSWORD = 'anonymous'
+	burst_size = 3
 
 	try:
-		opts, args = getopt.getopt(sys.argv[1:], "hs:c:", ["help", "server=", "cam="])
+		opts, args = getopt.getopt(sys.argv[1:], "hs:c:r:", ["help", "server=", "cam=", "res="])
 	except getopt.GetoptError:
 		usage()
 		sys.exit(2)
@@ -273,6 +274,8 @@ if __name__ == '__main__':
 			datastore_uri = arg
 		elif opt in ( "-c", "--cam"):
 			webcam = int(arg)
+		elif opt in ( "-r", "--res"):
+			resolution = arg
 
         parser = SafeConfigParser()
         parser.read(conf_file)
@@ -289,6 +292,12 @@ if __name__ == '__main__':
 		except:
 			webcam = 0
 		
+	if not resolution:
+		try:
+			resolution = parser.get('webcam', 'res')
+		except:
+			resolution = ''
+
 	# access datastore
 	try:
 		# avoid python 2.7.9 certificate validation
@@ -381,19 +390,22 @@ if __name__ == '__main__':
 
 	
         	capture = cv.CaptureFromCAM(webcam)
-	  #      cv.SetCaptureProperty(capture,cv.CV_CAP_PROP_FRAME_WIDTH,1280)
-	  #      cv.SetCaptureProperty(capture,cv.CV_CAP_PROP_FRAME_HEIGHT, 960);
+		if resolution:
+			(xres,yres) = resolution.strip("x")
+			cv.SetCaptureProperty(capture,cv.CV_CAP_PROP_FRAME_WIDTH, int(xres))
+			cv.SetCaptureProperty(capture,cv.CV_CAP_PROP_FRAME_HEIGHT, int(yres));
 
         	cv.NamedWindow(nia)
         	cv.MoveWindow(nia, xcam, ycam)
         	storage = cv.CreateMemStorage()
-        	cascade = cv.Load('/usr/share/webcam-ds-common/haarcascade_frontalface_alt.xml')
+		cascade = cv.Load('/usr/share/webcam-ds-common/haarcascade_frontalface_alt.xml'
 
 		# get current limits
 		face_max_x = int(cv.GetCaptureProperty(capture,cv.CV_CAP_PROP_FRAME_WIDTH))
 		face_max_y = int(cv.GetCaptureProperty(capture,cv.CV_CAP_PROP_FRAME_HEIGHT))
 
         	faces = []
+		correct_faces = []
 
         	i=0
 	        numrows = 1
@@ -401,6 +413,7 @@ if __name__ == '__main__':
         	nface=0
         	imagefile=datetime.now().strftime('%Y%m%d_%Hh%Mm%Ss%f') + '-'
         	runCapture = True
+		burst = 0
 
 
         	while runCapture:
@@ -408,13 +421,16 @@ if __name__ == '__main__':
             	# Only run the Detection algorithm every 5 frames to improve performance
 			if i%5==0:
 				faces = detect_faces(frame)
+				correct_faces = []
 
-			face_size_correct = True
+	#		face_size_correct = True
 			for (x,y,w,h) in faces:
 				rcolor = (0, 255, 0)
 				if (h < face_min_height) or (y < face_min_y) or (y+h > face_max_y) or (x < face_min_x) or (x+w > face_max_x):
-					face_size_correct = False
+#					#face_size_correct = False
 					rcolor = (0, 0, 255)
+				else:
+					correct_faces.append((x,y,w,h))
 
 				cv.Rectangle(frame, (x-1,y-1), (x+w+2,y+h+2), rcolor)
 
@@ -449,14 +465,18 @@ if __name__ == '__main__':
 			elif c == 45 or c == 173:
 				# - pressed
 				fzoom -= 0.1
-			elif ( c == 10 or c == 141 ) and face_size_correct:
+			elif ( burst > 0 or c == 10 or c == 141 ):
+				if burst == 0:
+					burst = burst_size
+				else:
+					burst -= 1
 				# ENTER pressed. Store image to disk
 				#imagefile=datetime.now().strftime('%Y%m%d_%Hh%Mm%Ss%f') + '.jpg'
 				#cv.SaveImage(imagefile, frame)
 				#image = Image.open(imagefile)
 				#image.show()
 					
-				for (x,y,w,h) in faces:
+				for (x,y,w,h) in correct_faces:
 					#cropfile = imagefile + str(nface) + '.jpg'
 					#cv.SaveImage(cropfile, frame[y:y+h, x:x+w])
 					#crop = Image.open(cropfile)
