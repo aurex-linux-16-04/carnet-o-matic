@@ -7,14 +7,14 @@ Standards-Version: 3.8.4
 
 Package: webcam-datastore
 Architecture: all
-Depends: ${misc:Depends}, ${python:Depends}, webcam-ds-common, python (>= 2.7), python-ldap, python-mysqldb, python-opencv, python-gtk2, v4l-utils
+Depends: ${misc:Depends}, ${python:Depends}, webcam-ds-common, python (>= 2.7), python-ldap, python-mysqldb, python-opencv, python-gtk2, v4l-utils, python-pil
 Description: datastore enabled webcam photo capture program
  The program uses any simple webcam to capture photos. Images are then
  uploaded to a centralized datastore-server for future use.
 
 Package: webcam-burst-ds
 Architecture: all
-Depends: ${misc:Depends}, ${python:Depends}, webcam-ds-common, python (>= 2.7), python-ldap, python-mysqldb, python-opencv, python-gtk2, v4l-utils
+Depends: ${misc:Depends}, ${python:Depends}, webcam-ds-common, python (>= 2.7), python-ldap, python-mysqldb, python-opencv, python-gtk2, v4l-utils, python-pil
 Description: datastore enabled webcam burst photo capture program
  The program uses any simple webcam to capture and upload to a 
  centralized datastore-server bursts of photos
