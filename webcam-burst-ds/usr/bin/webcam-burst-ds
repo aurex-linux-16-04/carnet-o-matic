@@ -20,7 +20,7 @@ mkdir -p "$APP_DIR"
 cd "$APP_DIR"
 ARG_CMD=""
 
-URI="-s https://fsserver:3499"
+URI="https://fsserver:3499"
 NUMCAM="0"
 
 while [ "$1" ] ; do

@@ -391,7 +391,7 @@ if __name__ == '__main__':
 	
         	capture = cv.CaptureFromCAM(webcam)
 		if resolution:
-			(xres,yres) = resolution.strip("x")
+			(xres,yres) = resolution.split("x")
 			cv.SetCaptureProperty(capture,cv.CV_CAP_PROP_FRAME_WIDTH, int(xres))
 			cv.SetCaptureProperty(capture,cv.CV_CAP_PROP_FRAME_HEIGHT, int(yres));
 
