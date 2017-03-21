@@ -1,3 +1,9 @@
+carnet-o-matic (0.15) xenial; urgency=medium
+
+  * Fixed path and filename in shell script wrapper
+
+ -- Luis Antonio Garcia Gisbert <luisgg@gmail.com>  Tue, 21 Mar 2017 14:20:31 +0100
+
 carnet-o-matic (0.14) xenial; urgency=medium
 
   * Added missing depends

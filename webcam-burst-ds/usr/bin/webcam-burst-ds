@@ -41,6 +41,6 @@ RESOLUTION="$(best_resolution "$NUMCAM")"
 
 ARG_CMD="$ARG_CMD -s $URI -c $NUMCAM -r $RESOLUTION"
 
-/usr/share/webcam-burst-ds/webcam_burst.py $ARG_CMD || rc=$?
+/usr/share/webcam-burst-ds/webcam_burst_ds.py $ARG_CMD || rc=$?
 
 exit $rc
