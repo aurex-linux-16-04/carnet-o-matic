@@ -398,7 +398,7 @@ if __name__ == '__main__':
         	cv.NamedWindow(nia)
         	cv.MoveWindow(nia, xcam, ycam)
         	storage = cv.CreateMemStorage()
-		cascade = cv.Load('/usr/share/webcam-ds-common/haarcascade_frontalface_alt.xml'
+		cascade = cv.Load('/usr/share/webcam-ds-common/haarcascade_frontalface_alt.xml')
 
 		# get current limits
 		face_max_x = int(cv.GetCaptureProperty(capture,cv.CV_CAP_PROP_FRAME_WIDTH))
