@@ -205,11 +205,70 @@ class StudentDialog(gtk.Window):
         self.show_all()
 
 
+class GuestDialog(gtk.Window):
+
+    def close(self,widget,event,data = None):
+        self.hide()
+        gtk.main_quit()
+        return gtk.FALSE
+
+    def prep(self,widget,option):
+        print widget, option
+	global STUDENTFULLNAME
+
+        STUDENTFULLNAME = self.fullnameentry.get_text()
+
+        self.hide()
+        gtk.main_quit()
+ 
+    def __init__(self, txt):
+        super(GuestDialog, self).__init__()
+
+        self.set_title(txt)
+        self.set_size_request(600, 160)
+        self.set_position(gtk.WIN_POS_CENTER)
+        
+        win = gtk.Fixed()
+
+        self.fullnamelabel = gtk.Label("Apellidos, Nombre:")
+        self.fullnameentry = gtk.Entry()
+	self.fullnameentry.set_width_chars(60)
+        
+        self.runbutton = gtk.Button("Guardar")
+	self.runbutton.set_flags(gtk.CAN_DEFAULT)
+
+	self.runbutton.grab_default()
+
+        self.exitbutton = gtk.Button("Cancelar")
+
+        self.exitbutton.connect("clicked", self.close, "Exit")
+        self.runbutton.connect("clicked", self.prep, "Run")
+
+        
+        win.put(self.fullnamelabel, 20, 30)
+        win.put(self.fullnameentry, 140, 25)
+        
+        win.put(self.runbutton, 340, 150)
+        win.put(self.exitbutton, 140, 150)
+
+        self.add(win)
+	self.runbutton.grab_default()
+        
+        self.connect("destroy", gtk.main_quit)
+        self.show_all()
+
+
 def get_student(txt, ltype):
 	global LASTTYPE
 	LASTTYPE=ltype
 	StudentDialog(txt)
 	gtk.main()
 	return (STUDENTFULLNAME, STUDENTEMAIL, STUDENTTYPE)
+
+def get_guest(txt, ltype):
+	GuestDialog(txt)
+	gtk.main()
+	return STUDENTFULLNAME
+
 
 # ===============

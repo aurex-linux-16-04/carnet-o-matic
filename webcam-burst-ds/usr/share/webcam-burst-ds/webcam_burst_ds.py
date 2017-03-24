@@ -3,6 +3,7 @@
 
 import cv
 import sys
+from time import sleep
   
 from datetime import datetime
 
@@ -21,6 +22,8 @@ import MySQLdb
 import getopt
 import ssl
 
+import Tkinter as tk
+
 from webcam_dialogs import error_dialog, info_dialog, get_student
 
 def usage(param=''):
@@ -28,56 +31,6 @@ def usage(param=''):
 		print "Undefined parameter: "+param
 
 	print 'Usage: '+sys.argv[0]+' -s DATASTORE_SERVER_URI'
-
-
-
-def draw_card(nia):
-    return True
-    
-    background = Image.open("student-card-bg.png")
-    transbg=Image.new('RGBA',background.size)
-#    transbg.save('print-image.png')
-    foreground = Image.open(nia + ".jpg")
-    foreground.thumbnail((145,181))
-
-    #transbg.paste(foreground, (462, 75), mask=foreground)
-    transbg.paste(foreground, (462, 75))
-    draw = ImageDraw.Draw(transbg)
-    font = ImageFont.truetype("/usr/share/fonts/truetype/msttcorefonts/arial.ttf", 24)
-    nombre="Luis"
-    apellidos="García Gisbert"
-    nompos=(160,188)
-    apepos=(160,236)
-    niapos=(160,286)
-    draw.text(nompos,nombre.decode('utf-8'),(0,0,0),font=font)
-    draw.text(apepos,apellidos.decode('utf-8'),(0,0,0),font=font)
-    draw.text(niapos,nia.decode('utf-8'),(0,0,0),font=font)
-    #barcode0 = code128_image(nia.decode('utf-8'), height=60)
-    #barcode = PIL.ImageOps.invert(barcode0)
-    bar_text="Garcia Gisbert"
-    #barcode = code128_image(bar_text.decode('utf-8'), height=60).convert("RGBA")
-
-    ## make white trnsparent
-    #pixdata = barcode.load()
-    #for y in xrange(barcode.size[1]):
-    #    for x in xrange(barcode.size[0]):
-    #        if pixdata[x, y] == (255, 255, 255, 255):
-    #            pixdata[x, y] = (255, 255, 255, 0)
-    #
-    #
-    #transbg.paste(barcode,(100,300),mask=barcode)
-    background.paste(transbg, (0, 0), mask=transbg)
-    transbg.save(nia + '-print-image.png')
-#    transbg.show()
-    background.save(nia + '-preview-image.png')
-    # create a cv window instead of PIL to show the image
-    #background.show()
-#image = Image.open(“ponzo.jpg”)   # image is a PIL image
-    background_cv = cv.LoadImage(nia + '-preview-image.png')
-    cv.ShowImage("carnet", background_cv)
-    c=255
-    while c == 255:
-        c = cv.WaitKey(10) % 256
 
 
 def get_text(parent, message, default=''):
@@ -150,55 +103,43 @@ def detect_faces(image):
             faces.append((xnew,ynew,int(wnew),int(hnew)))
     return faces
 
-def on_mouse(event, x, y, flag, param):
+def on_mouse(event, x, y, flag, param, user_id, demo_mode):
         global runCapture
         if(event == cv.CV_EVENT_LBUTTONDOWN):
             #print x,y
-            runCapture = False
+#            runCapture = False
             #print  imagefile + str(param) + '.jpg'
-            os.rename( imagefile + str(param) + '.jpg', nia + '.jpg')
-            with open(nia+".jpg", "rb") as handle:
-                binary_data = xmlrpclib.Binary(handle.read())
-            handle.close()
-            if server.put_file(USERNAME, PASSWORD, datastore_space, nia + '.jpg', binary_data):
-		#put in database
-		try:
-			# connect
-			db = MySQLdb.connect(host=dbhost, user=dbuser, passwd=dbpass, db=dbname)
-			cur = db.cursor()
-			try:
-				if (NOT_IN_ADMITACA and NOT_IN_ALUMNOS and NOT_IN_PROFES):
-					#cur.execute("INSERT INTO admitaca(foto_guardada, dni, nombre_comp) VALUES ('%s', '%s', '%s');" % ('1', nia, new_apenom))
-					#info_dialog(nia+".jpg - "+nia+" - "+new_apenom+ " - "+datetime.now().strftime('%Y%m%d')+ " - "+new_email)
-
-					cur.execute("INSERT INTO excepciones_fotos(foto, DNI_NORM, nombre_comp, fecha_foto, email, tipo) VALUES ('%s', '%s', '%s', '%s', '%s', '%s' );" % (nia+".jpg", nia, new_apenom, datetime.now().strftime('%Y%m%d'), new_email, new_type))
-				elif (NOT_IN_ALUMNOS and NOT_IN_PROFESORES):
-				#	#cur.execute("UPDATE alumnos SET foto='%s' WHERE DNI_NORM='%s';" % (nia+".jpg", nia))
-					cur.execute("UPDATE admitaca SET email='%s' WHERE dni='%s';" % (new_email, nia))
-				elif (NOT_IN_ADMITACA and NOT_IN_PROFESORES):
-					cur.execute("UPDATE alumnos SET foto='%s' WHERE DNI_NORM='%s';" % (nia+".jpg", nia))
-#				else:
-#					cur.execute("UPDATE alumnos SET foto='%s' WHERE DNI_NORM='%s';" % (nia+".jpg", nia))
-
+            apenom = get_guest("Introduzca nombre")
+            if apenom:
+                os.rename( imagefile + str(param) + '.jpg', user_id + '.jpg')
+                if not demo_mode:
+                    with open(user_id+".jpg", "rb") as handle:
+                        binary_data = xmlrpclib.Binary(handle.read())
+                    handle.close()
+                    if server.put_file(USERNAME, PASSWORD, datastore_space, user_id + '.jpg', binary_data):
+                        #put in database
+                        try:
+                            # connect
+                            db = MySQLdb.connect(host=dbhost, user=dbuser, passwd=dbpass, db=dbname)
+                            cur = db.cursor()
+                            try:
+                                cur.execute("INSERT INTO fotos_jornadas (foto, user_id, nombre_comp, fecha_foto) VALUES ('%s', '%s', '%s', '%s');" % (user_id + ".jpg", user_ide, apenom, datetime.now().strftime('%Y%m%d'))
 				db.commit()
-
-			except:
-				# Rollback in case there is any error
-				db.rollback()
-
-			cur.close()
-			db.close()
-			info_dialog("Foto de " + nia + " grabada correctamente")
-		except:
-			error_dialog("Error grabando foto")
-            else:
-		error_dialog("Error grabando foto")
-
-            clear_tmpfiles()
-            draw_card(nia)
+                            except:
+                                # Rollback in case there is any error
+                                db.rollback()
+                            cur.close()
+                            db.close()
+                            info_dialog("Foto de " + apenom + " grabada correctamente")
+                        except:
+                            error_dialog("Error grabando foto")
+                    else:
+                        error_dialog("Error grabando foto")
+                    clear_tmpfiles()
+                cv.DestroyWindow('crop' + str(param))
 
         elif(event == cv.CV_EVENT_RBUTTONDOWN):
-           cv.DestroyWindow('crop' + str(param)) 
+            cv.DestroyWindow('crop' + str(param)) 
             
 def clear_tmpfiles():
     filelist = glob.glob(imagefile + "*.jpg")
@@ -212,9 +153,16 @@ if __name__ == '__main__':
         ycam=0
         xcam=0
         #ycrop=600
+	# get maximum screen size (including multiple monitor config)
+	root_window = tk.Tk()
+	screen_width = root_window.winfo_screenwidth()
+	screen_height = root_window.winfo_screenheight()
+
         ycrop=0
-        xcrop=602
-        maxcropwindows=3
+        xcrop=screen_width
+        maxcropwindows=5
+
+	demo_mode = True
 
         # correction factors
   #     fx=1.3
@@ -228,7 +176,8 @@ if __name__ == '__main__':
         yoffset = yoffset0
 
 	#face_min_width = 200
-	face_min_height = 260
+	#face_min_height = 260
+	face_min_height = 150
 	face_min_x = 0
 	face_min_y = 0
 
@@ -258,7 +207,7 @@ if __name__ == '__main__':
 
 	USERNAME = 'anonymous'
 	PASSWORD = 'anonymous'
-	burst_size = 3
+	burst_size = 0
 
 	try:
 		opts, args = getopt.getopt(sys.argv[1:], "hs:c:r:", ["help", "server=", "cam=", "res="])
@@ -324,25 +273,9 @@ if __name__ == '__main__':
 	except:
 		usage('Error accessing database')
 		sys.exit()
+
 	while True:
-        	nia = get_text(None, 'Introduzca el NIF/NIE:', def_nia)
-		def_nia = ''
-		if not nia:
-            		quit()
-
-		nia = nia.upper()
-		nia = nia.strip()
-		if not ( len(nia) == 10 ):
-			if nia[0].isdigit():
-				prenia = ''
-			else:
-				prenia = nia[:1]
-				nia = nia[1:]
-
-			while (len(prenia+nia) < 10):
-				nia = "0"+nia
-
-			nia = prenia + nia
+        	nia = "Captura"
 				
 		# connect
 		db = MySQLdb.connect(host=dbhost, user=dbuser, passwd=dbpass, db=dbname, charset="utf8")
@@ -415,22 +348,24 @@ if __name__ == '__main__':
         	runCapture = True
 		burst = 0
 
+		face_size_correct = False
 
         	while runCapture:
 			frame = cv.QueryFrame(capture)
             	# Only run the Detection algorithm every 5 frames to improve performance
 			if i%5==0:
 				faces = detect_faces(frame)
-				correct_faces = []
 
-	#		face_size_correct = True
+			face_size_correct = False
+			correct_faces = []
 			for (x,y,w,h) in faces:
 				rcolor = (0, 255, 0)
 				if (h < face_min_height) or (y < face_min_y) or (y+h > face_max_y) or (x < face_min_x) or (x+w > face_max_x):
-#					#face_size_correct = False
+#						#face_size_correct = False
 					rcolor = (0, 0, 255)
 				else:
 					correct_faces.append((x,y,w,h))
+					face_size_correct = True
 
 				cv.Rectangle(frame, (x-1,y-1), (x+w+2,y+h+2), rcolor)
 
@@ -465,11 +400,7 @@ if __name__ == '__main__':
 			elif c == 45 or c == 173:
 				# - pressed
 				fzoom -= 0.1
-			elif ( burst > 0 or c == 10 or c == 141 ):
-				if burst == 0:
-					burst = burst_size
-				else:
-					burst -= 1
+			elif ( c == 10 or c == 141 ) and face_size_correct:
 				# ENTER pressed. Store image to disk
 				#imagefile=datetime.now().strftime('%Y%m%d_%Hh%Mm%Ss%f') + '.jpg'
 				#cv.SaveImage(imagefile, frame)
@@ -484,18 +415,18 @@ if __name__ == '__main__':
 					if nface == numrows*maxcropwindows:
 						xcropnext=xcrop 
 						numrows += 1
-						ycrop += 15
-
-#                    if  nface >= numrows:
-#                        cv.DestroyWindow("crop" +str(nface-maxcropwindows*(numrows-1)))
-
+						ycrop += int(h/4)
+			
+					xcropnext=xcropnext - int(2*w/3)
 					cv.ShowImage('crop' + str(nface),frame[y:y+h, x:x+w])
 					cv.SaveImage( imagefile + str(nface) + '.jpg', frame[y:y+h, x:x+w])
 					cv.SetMouseCallback("crop" + str(nface),on_mouse, param=nface)
 					cv.MoveWindow("crop" + str(nface), xcropnext, ycrop)
 					#xcropnext = xcropnext + w + 4
-					xcropnext = xcropnext + 100
 					nface += 1
+#				sleep(1)
+				#face_size_correct = False
+
 			#else:
 	                #print str(c)
     
