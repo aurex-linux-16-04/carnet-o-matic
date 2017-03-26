@@ -23,6 +23,9 @@ import getopt
 import ssl
 
 import Tkinter as tk
+import socket
+import time
+import random
 
 from webcam_dialogs import error_dialog, info_dialog, get_student
 
@@ -103,14 +106,17 @@ def detect_faces(image):
             faces.append((xnew,ynew,int(wnew),int(hnew)))
     return faces
 
-def on_mouse(event, x, y, flag, param, user_id, demo_mode):
+def on_mouse(event, x, y, flag, param, demo_mode):
         global runCapture
+	global usercount
         if(event == cv.CV_EVENT_LBUTTONDOWN):
             #print x,y
 #            runCapture = False
             #print  imagefile + str(param) + '.jpg'
             apenom = get_guest("Introduzca nombre")
             if apenom:
+		usercount=usercount+1
+		user_id = user_id_base +str(usercount)
                 os.rename( imagefile + str(param) + '.jpg', user_id + '.jpg')
                 if not demo_mode:
                     with open(user_id+".jpg", "rb") as handle:
@@ -158,6 +164,13 @@ if __name__ == '__main__':
 	screen_width = root_window.winfo_screenwidth()
 	screen_height = root_window.winfo_screenheight()
 
+	demo_mode = False
+	user_id_base = ""
+	for i in range(3):
+		user_id_base=user_id_base + str(random.randint(0,9))
+
+	user_id_base=user_id_base+"-"+str(int(time.time()))
+	user_count = 0
         ycrop=0
         xcrop=screen_width
         maxcropwindows=5
@@ -198,9 +211,6 @@ if __name__ == '__main__':
 	new_apenom = ''
 	new_email = ''
 	new_type = ''
-	NOT_IN_ADMITACA = True
-	NOT_IN_ALUMNOS = True
-	NOT_IN_PROFES  = True
 	new_type="ALUMNO"
 
 	def_nia = ''
@@ -277,51 +287,6 @@ if __name__ == '__main__':
 	while True:
         	nia = "Captura"
 				
-		# connect
-		db = MySQLdb.connect(host=dbhost, user=dbuser, passwd=dbpass, db=dbname, charset="utf8")
-		cur = db.cursor()
-		#search in database1 (admitaca)
-		cur.execute("SELECT nombre_comp, NIA, email FROM admitaca WHERE dni='%s';" % (nia))
-		first_row = cur.fetchone()
-		NOT_IN_ADMITACA = False
-		NOT_IN_ALUMNOS = True
-		NOT_IN_PROFES  = True
-
-		if not first_row:
-			NOT_IN_ADMITACA = True
-			NOT_IN_ALUMNOS = False
-			#search in database2 (alumnos)
-			cur.execute("SELECT nombre_comp, NIA, email FROM alumnos WHERE DNI_NORM='%s';" % (nia))
-			first_row = cur.fetchone()
-
-			if not first_row:
-				NOT_IN_ALUMNOS = True
-				NOT_IN_PROFES = False
-				#search in database3 (profes)
-				cur.execute("SELECT apellido1, apellido2, nombre, email FROM profesores WHERE dni='%s';" % (nia))
-				first_row2 = cur.fetchone()
-
-				if not first_row2:
-					NOT_IN_PROFES = True
-				else:
-					first_row = (first_row2[0] + ' ' + first_row2[1] + ', ' + first_row2[2], ' ', first_row2[3])
-
-		if ( NOT_IN_ADMITACA and NOT_IN_ALUMNOS and NOT_IN_PROFES ):
-			(new_apenom, new_email, new_type) = get_student(nia+' no encontrado', new_type)
-			if not new_apenom:
-				def_nia = nia
-				continue
-			new_apenom = new_apenom.upper()
-			new_apenom = new_apenom.strip()
-
-		else:
-			new_email = get_text(None, first_row[0].decode('utf-8')+'\nDNI: '+nia+'\nNIA: '+first_row[1]+'\n Introduzca email:', first_row[2])
-
-
-		cur.close()
-		db.close()
-
-	
         	capture = cv.CaptureFromCAM(webcam)
 		if resolution:
 			(xres,yres) = resolution.split("x")
@@ -420,7 +385,7 @@ if __name__ == '__main__':
 					xcropnext=xcropnext - int(2*w/3)
 					cv.ShowImage('crop' + str(nface),frame[y:y+h, x:x+w])
 					cv.SaveImage( imagefile + str(nface) + '.jpg', frame[y:y+h, x:x+w])
-					cv.SetMouseCallback("crop" + str(nface),on_mouse, param=nface)
+					cv.SetMouseCallback("crop" + str(nface),on_mouse, param=nface, demo_mode)
 					cv.MoveWindow("crop" + str(nface), xcropnext, ycrop)
 					#xcropnext = xcropnext + w + 4
 					nface += 1
