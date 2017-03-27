@@ -27,7 +27,7 @@ import socket
 import time
 import random
 
-from webcam_dialogs import error_dialog, info_dialog, get_student
+from webcam_dialogs import error_dialog, info_dialog, get_student, get_guest, yesno_dialog, info_dialog, get_credentials
 
 def usage(param=''):
 	if param:
@@ -106,42 +106,53 @@ def detect_faces(image):
             faces.append((xnew,ynew,int(wnew),int(hnew)))
     return faces
 
-def on_mouse(event, x, y, flag, param, demo_mode):
-        global runCapture
+def on_mouse(event, x, y, flag, param):
 	global usercount
+	global demo_mode
+	global saved_list
         if(event == cv.CV_EVENT_LBUTTONDOWN):
             #print x,y
 #            runCapture = False
-            #print  imagefile + str(param) + '.jpg'
-            apenom = get_guest("Introduzca nombre")
-            if apenom:
-		usercount=usercount+1
-		user_id = user_id_base +str(usercount)
-                os.rename( imagefile + str(param) + '.jpg', user_id + '.jpg')
-                if not demo_mode:
+#            print  imagefile + str(param) + '.jpg'
+            if not demo_mode:
+                apenom = get_guest("Introduzca nombre")
+            else:
+                apenom = ""
+	
+            if demo_mode or apenom:
+                usercount=usercount+1
+                user_id = user_id_base +str(usercount)
+	        if apenom:
+                    os.rename( imagefile + str(param) + '.jpg', user_id + '.jpg')
                     with open(user_id+".jpg", "rb") as handle:
                         binary_data = xmlrpclib.Binary(handle.read())
                     handle.close()
                     if server.put_file(USERNAME, PASSWORD, datastore_space, user_id + '.jpg', binary_data):
+			#print "foto subida"
                         #put in database
                         try:
                             # connect
                             db = MySQLdb.connect(host=dbhost, user=dbuser, passwd=dbpass, db=dbname)
                             cur = db.cursor()
-                            try:
-                                cur.execute("INSERT INTO fotos_jornadas (foto, user_id, nombre_comp, fecha_foto) VALUES ('%s', '%s', '%s', '%s');" % (user_id + ".jpg", user_ide, apenom, datetime.now().strftime('%Y%m%d'))
-				db.commit()
-                            except:
-                                # Rollback in case there is any error
-                                db.rollback()
+#                            try:
+                            cur.execute("INSERT INTO fotos_jornadas (foto, user_id, nombre_comp) VALUES ('%s', '%s', '%s');" % (user_id + ".jpg", user_id, apenom))
+     		            db.commit()
+#                            except:
+#                                # Rollback in case there is any error
+#                                db.rollback()
                             cur.close()
                             db.close()
                             info_dialog("Foto de " + apenom + " grabada correctamente")
+                            saved_list.append(user_id)
                         except:
+                            #print dbhost+ " - "+ dbuser + " - "+ dbpass + " - "+ dbname
                             error_dialog("Error grabando foto")
                     else:
-                        error_dialog("Error grabando foto")
-                    clear_tmpfiles()
+                        error_dialog("Error mandando foto")
+		else:
+                    os.rename( imagefile + str(param) + '.jpg', user_id + '.jpg')
+		    info_dialog("Foto Seleccionada")
+
                 cv.DestroyWindow('crop' + str(param))
 
         elif(event == cv.CV_EVENT_RBUTTONDOWN):
@@ -175,7 +186,7 @@ if __name__ == '__main__':
         xcrop=screen_width
         maxcropwindows=5
 
-	demo_mode = True
+	demo_mode = False
 
         # correction factors
   #     fx=1.3
@@ -193,6 +204,8 @@ if __name__ == '__main__':
 	face_min_height = 150
 	face_min_x = 0
 	face_min_y = 0
+
+	usercount=0
 
 	USERNAME = ''
 	PASSWORD = ''
@@ -213,10 +226,16 @@ if __name__ == '__main__':
 	new_type = ''
 	new_type="ALUMNO"
 
-	def_nia = ''
 
-	USERNAME = 'anonymous'
-	PASSWORD = 'anonymous'
+	nia = 'Captura'
+
+
+	(USERNAME, PASSWORD) = get_credentials()
+        if not USERNAME or USERNAME.upper == "DEMO" or not PASSWORD :
+		demo_mode = True
+		nia = "DEMO"
+                info_dialog("El programa funcionará únicamente en modo DEMO")
+
 	burst_size = 0
 
 	try:
@@ -258,35 +277,37 @@ if __name__ == '__main__':
 			resolution = ''
 
 	# access datastore
-	try:
-		# avoid python 2.7.9 certificate validation
-		if sys.version_info[0]*100 + sys.version_info[1]*10 + sys.version_info[2] >= 279 :
-			ssl._create_default_https_context = ssl._create_unverified_context
-		server = xmlrpclib.Server(datastore_uri)
-		dbhost = server.get_value(USERNAME, PASSWORD, datastore_space, 'dbhost')
-		dbname = server.get_value(USERNAME, PASSWORD, datastore_space, 'dbname')
-		dbuser = server.get_value(USERNAME, PASSWORD, datastore_space, 'dbuser')
-		dbpass = server.get_value(USERNAME, PASSWORD, datastore_space, 'dbpass')
-	except:
-#		usage('Error accessing datastore server')
-		error_dialog('Error accessing datastore server')
-		sys.exit
+	if not demo_mode:
+		try:
+			# avoid python 2.7.9 certificate validation
+			if sys.version_info[0]*100 + sys.version_info[1]*10 + sys.version_info[2] >= 279 :
+				ssl._create_default_https_context = ssl._create_unverified_context
+			server = xmlrpclib.Server(datastore_uri)
+			dbhost = server.get_value(USERNAME, PASSWORD, datastore_space, 'dbhost')
+			dbname = server.get_value(USERNAME, PASSWORD, datastore_space, 'dbname')
+			dbuser = server.get_value(USERNAME, PASSWORD, datastore_space, 'dbuser')
+			dbpass = server.get_value(USERNAME, PASSWORD, datastore_space, 'dbpass')
+		except:
+#			usage('Error accessing datastore server')
+			error_dialog('Error accessing datastore server')
+			sys.exit
 
-	if not dbhost or not dbname or not dbpass:
-#		usage('Error retrieving mysql parameters')
-		error_dialog('Error retrieving mysql parameters')
-		sys.exit()
+		if not dbhost or not dbname or not dbpass:
+#			usage('Error retrieving mysql parameters')
+			error_dialog('Error retrieving mysql parameters')
+			sys.exit()
 
-	#connect to database
-	try:
-		db = MySQLdb.connect(host=dbhost, user=dbuser, passwd=dbpass, db=dbname)
-	except:
-		usage('Error accessing database')
-		sys.exit()
+		#connect to database
+		try:
+			db = MySQLdb.connect(host=dbhost, user=dbuser, passwd=dbpass, db=dbname)
+		except:
+			usage('Error accessing database')
+			sys.exit()
 
-	while True:
-        	nia = "Captura"
-				
+
+	runForever = True
+	saved_list = []
+	while runForever:
         	capture = cv.CaptureFromCAM(webcam)
 		if resolution:
 			(xres,yres) = resolution.split("x")
@@ -385,7 +406,7 @@ if __name__ == '__main__':
 					xcropnext=xcropnext - int(2*w/3)
 					cv.ShowImage('crop' + str(nface),frame[y:y+h, x:x+w])
 					cv.SaveImage( imagefile + str(nface) + '.jpg', frame[y:y+h, x:x+w])
-					cv.SetMouseCallback("crop" + str(nface),on_mouse, param=nface, demo_mode)
+					cv.SetMouseCallback("crop" + str(nface),on_mouse, param = nface)
 					cv.MoveWindow("crop" + str(nface), xcropnext, ycrop)
 					#xcropnext = xcropnext + w + 4
 					nface += 1
@@ -399,5 +420,36 @@ if __name__ == '__main__':
         	clear_tmpfiles()
         	capture = None
         	cv.DestroyAllWindows()
+		if nface == 0 and yesno_dialog("Terminar el programa?"):
+			runForever = False
+			
+	if saved_list:
+		csv_file = datastore_space+"-"+user_id_base+".csv"
+		try:
+			csv = open(csv_file, "w")
+			csv.write('"user_id","nombre_comp","foto"\r\n')
+			# connect
+			db = MySQLdb.connect(host=dbhost, user=dbuser, passwd=dbpass, db=dbname)
+			cur = db.cursor()
+			#read
+			for id in saved_list:
+				cur.execute("SELECT user_id, nombre_comp, foto from fotos_jornadas where user_id='%s';" % (id))
+				row = cur.fetchone()
+				while row is not None:
+					csv.write('"'+row[0]+'","'+ row[1]+'","'+row[2]+'"\r\n')
+					row = cur.fetchone()
 
- 
+			cur.close()
+			db.close()
+			csv.close()
+
+			with open(csv_file, "rb") as handle:
+				binary_data = xmlrpclib.Binary(handle.read())
+				handle.close()
+			if not server.put_file(USERNAME, PASSWORD, datastore_space, csv_file, binary_data):
+				error_dialog("Error enviando csv")
+
+		except:
+			error_dialog("Error generando csv")
+
+

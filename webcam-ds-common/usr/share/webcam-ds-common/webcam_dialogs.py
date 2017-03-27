@@ -225,14 +225,14 @@ class GuestDialog(gtk.Window):
         super(GuestDialog, self).__init__()
 
         self.set_title(txt)
-        self.set_size_request(600, 160)
+        self.set_size_request(620, 160)
         self.set_position(gtk.WIN_POS_CENTER)
         
         win = gtk.Fixed()
 
         self.fullnamelabel = gtk.Label("Apellidos, Nombre:")
         self.fullnameentry = gtk.Entry()
-	self.fullnameentry.set_width_chars(60)
+	self.fullnameentry.set_width_chars(50)
         
         self.runbutton = gtk.Button("Guardar")
 	self.runbutton.set_flags(gtk.CAN_DEFAULT)
@@ -246,10 +246,10 @@ class GuestDialog(gtk.Window):
 
         
         win.put(self.fullnamelabel, 20, 30)
-        win.put(self.fullnameentry, 140, 25)
+        win.put(self.fullnameentry, 150, 25)
         
-        win.put(self.runbutton, 340, 150)
-        win.put(self.exitbutton, 140, 150)
+        win.put(self.runbutton, 340, 100)
+        win.put(self.exitbutton, 140, 100)
 
         self.add(win)
 	self.runbutton.grab_default()
@@ -265,7 +265,7 @@ def get_student(txt, ltype):
 	gtk.main()
 	return (STUDENTFULLNAME, STUDENTEMAIL, STUDENTTYPE)
 
-def get_guest(txt, ltype):
+def get_guest(txt):
 	GuestDialog(txt)
 	gtk.main()
 	return STUDENTFULLNAME
