@@ -1,3 +1,9 @@
+carnet-o-matic (0.17) xenial; urgency=medium
+
+  * first working version of webcam-burst
+
+ -- Luis Antonio Garcia Gisbert <luisgg@gmail.com>  Tue, 28 Mar 2017 00:33:54 +0200
+
 carnet-o-matic (0.16) xenial; urgency=medium
 
   * Added python-pil to Depends
