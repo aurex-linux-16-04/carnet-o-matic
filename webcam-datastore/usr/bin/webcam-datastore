@@ -6,12 +6,12 @@ APP_DIR="$HOME/webcam-datastore"
 mkdir -p "$APP_DIR"
 cd "$APP_DIR"
 ARG_CMD=""
-S$="-s https://fsserver:3499"
+S="-s https://fsserver:3499"
 
 while [ "$1" ] ; do
 	if [ "$1" = "-s" ] ; then
 		shift
-		S$="-s $1"
+		S="-s $1"
 	else
 		ARG_CMD="$ARG_CMD $1"
 	fi
